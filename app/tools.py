@@ -71,24 +71,89 @@ def get_delivery_estimate(pincode: str, speed: str = "standard") -> dict:
 
 @tool(parse_docstring=True)
 def check_return_eligibility(order_id: str, reason: str) -> dict:
-    """TODO MP1-T1: write this docstring yourself - it is the prompt the model reads to decide WHEN to call this tool.
-    Say what the tool checks, and when to use it (and when not to).
+    """
+    Check whether a customer's order is eligible for a return or refund.
+
+    Use this tool whenever a customer asks whether an existing order
+    can be returned or refunded.
+
+    The tool checks:
+    1. Whether the order exists.
+    2. Whether the order has been delivered.
+    3. Whether the product category is returnable.
+    4. Whether the request falls within the applicable return window.
+    5. The potential refund amount.
+
+    Do not use this tool for order tracking, cancellations before delivery,
+    or general questions about return policies.
 
     Args:
-        order_id: TODO - describe it (format, e.g. ORD-10231)
-        reason: TODO - describe it, and list the allowed values (see REASONS above)
+        order_id: The customer's order ID, such as ORD-10231.
+        reason: The reason for requesting a return. Allowed values are:
+            damaged, defective, wrong_item, changed_mind,
+            not_as_described.
+
+    Returns:
+        A dictionary containing eligibility, the reason for the decision,
+        applicable return window, and refund information when eligible.
+
+    Raises:
+        ValueError: If the supplied return reason is invalid.
     """
-    # TODO MP1-T1: Northwind Store's return rules, in this order:
-    #   o = _find(order_id)
-    #   1. not delivered yet (status != "delivered")      -> {"eligible": False, "why": "not delivered yet ..."}
-    #   2. o["category"] in NON_RETURNABLE                 -> {"eligible": False, "why": "<category> is non-returnable"}
-    #   3. window = DAMAGED_WINDOW_DAYS if reason in {"damaged", "defective", "wrong_item"} else RETURN_WINDOW_DAYS
-    #      days = (TODAY - date.fromisoformat(o["delivered_on"])).days
-    #      days > window                                    -> {"eligible": False, "why": f"delivered {days} days ago; window is {window} days"}
-    #   4. otherwise -> {"eligible": True, "days_since_delivery": days, "window_days": window,
-    #                    "refund_rupees": o["price"], "how": "start the return on the website: My Orders > Return"}
-    # TODO MP1-T2: raise ValueError if reason is not one of REASONS (say which values are allowed).
-    raise NotImplementedError("TODO MP1-T1")
+
+    if reason not in REASONS:
+       return{
+            f"Invalid reason '{reason}'. "
+            f"Allowed values are: {', '.join(sorted(REASONS))}"
+        }
+
+    o = _find(order_id)
+
+    if o["status"] != "delivered":
+        return {
+            "eligible": False,
+            "why": f"Order has not been delivered yet. Current status: {o['status']}"
+        }
+
+    if o["category"] in NON_RETURNABLE:
+
+        return {
+        "eligible": False,
+        "order_id": order_id,
+        "return_reason": reason,
+        "category": o["category"],
+        "why": (
+            f"{o['category']} products are non-returnable "
+            "under our return policy."
+        ),
+        "refund_rupees": 0,
+        "next_step": "Contact customer support if you received a defective item."
+        }
+
+    window = (
+        DAMAGED_WINDOW_DAYS
+        if reason in {"damaged", "defective", "wrong_item"}
+        else RETURN_WINDOW_DAYS
+    )
+
+    days = (
+        TODAY - date.fromisoformat(o["delivered_on"])
+    ).days
+
+    if days > window:
+        return {
+            "eligible": False,
+            "why": f"Delivered {days} days ago; window is {window} days"
+        }
+
+    return {
+        "eligible": True,
+        "days_since_delivery": days,
+        "window_days": window,
+        "refund_rupees": o["price"],
+        "how": "Start the return on the website: My Orders > Return"
+    }
+
 
 
 TOOLS = {"get_order_status": get_order_status, "get_delivery_estimate": get_delivery_estimate,
