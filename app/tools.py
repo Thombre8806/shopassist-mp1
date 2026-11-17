@@ -98,7 +98,6 @@ def get_delivery_estimate(pincode: str, speed: str = "standard") -> dict:
             "charge_rupees": 0, "note": "free standard delivery on orders above Rs 499; Rs 49 below that"}
 
 
-
 @tool(parse_docstring=True)
 def check_return_eligibility(order_id: str, reason: str) -> dict:
     """
