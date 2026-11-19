@@ -1,6 +1,6 @@
 # Mini-Project 1 — report
 
-1. Me, and how I used AI
+## 1. Me, and how I used AI
 My name is Om Thombre, and my GitHub username is Thombre8806.
 
 I developed the ShopAssist AI-powered e-commerce customer support project as part of Mini-Project 1. During development, I used ChatGPT as a technical assistant to help me solve complex problems and understand concepts that were difficult for me.
@@ -13,7 +13,7 @@ One suggestion I corrected was trying to access app/chat.py. ChatGPT initially g
 
 I used AI mainly to overcome technical difficulties, learn new concepts and debug problems during development. I also ran commands, inspected project files and tested the implementation myself. I believe that using AI is helpful, but understanding the code and being able to explain the project is my responsibility. I never shared my .env file or secret API keys with ChatGPT.
 
-2. How a request flows
+## 2. How a request flows
 When a customer sends a message such as "Can I return the shoes in ORD-10231?", the request first reaches the POST /chat/stream endpoint in app/main.py.
 
 The chat_stream() function receives the request and gets the conversation history using SESSIONS.setdefault(). It then calls build_messages() to prepare the messages for the LLM. This function adds the system prompt, previous conversation history and the current user message. The system prompt is loaded from prompts/system.md using agent.load_system_prompt() when the application starts. Previous messages are passed through memory.trim() to manage the conversation context.
@@ -28,7 +28,7 @@ During streaming, generated text is sent to the customer as SSE events using the
 
 This complete flow allows ShopAssist to receive customer questions, use conversation memory, call tools when necessary and stream the final response back to the customer.
 
-3. Memory: my choice, with numbers
+## 3. Memory: my choice, with numbers
 For ShopAssist, I selected the Window Memory strategy with KEEP_TURNS set to 4. I chose this strategy because it is simple, predictable and helps control the number of tokens sent to the LLM on every request.
 
 In my implementation, one conversation turn consists of one customer message and one assistant response. Therefore, KEEP_TURNS = 4 means that the application retains the latest 4 conversation turns, or 8 messages, and removes older messages from the context sent to the model.
@@ -41,7 +41,7 @@ The main limitation of window memory is that older information disappears when i
 
 From the customer's perspective, this could mean repeating information they have already provided. I selected window memory because it provides predictable context management and reduces token usage, but I understand that it sacrifices long-term conversational recall.
 
-4. Tools and validation
+## 4. Tools and validation
 In ShopAssist, I implemented three read-only tools: get_order_status, get_delivery_estimate and check_return_eligibility. These tools help the AI assistant retrieve order information, calculate delivery estimates and check whether a customer is eligible for a return.
 
 For order validation, I implemented the _find() function. It checks whether the order ID is a string, follows the required format ORD-12345, and exists in the orders database. For delivery estimates, I validate that the pincode contains exactly six digits and that the delivery speed is either standard or express.
@@ -52,7 +52,7 @@ One example of invalid input is an order ID such as ORD-123. It does not follow 
 
 All three tools are read-only. They do not directly cancel orders, issue refunds or modify customer records. This makes the application safer because actions that change customer data should require additional authorization and human approval.
 
-5. Defending the Prompt
+## 5. Defending the Prompt
 
 In ShopAssist, I added security rules to protect the assistant from prompt injection attacks. The main rules are:
 
@@ -69,7 +69,7 @@ The attack attempted to make the assistant ignore its tools and claim that order
 
 I tried adding more security rules to identify fake XML tags and trust only actual tool results. However, the attack still failed to be fully blocked in my evaluation. My final result was 3 out of 4 attacks resisted. This taught me that prompt instructions alone cannot guarantee complete security.
 
-6. Results
+## 6. Results
 
 Experiment Summary
 
@@ -104,7 +104,7 @@ A smaller model might incorrectly call an order-status or return-eligibility too
 
 Overall, the evaluation helped me understand that an AI assistant must be tested for both answer correctness and correct tool selection.
 
-7. Gateway, Docker and Honest Limits
+## 7. Gateway, Docker and Honest Limits
 
 I used LiteLLM as a gateway between my ShopAssist application and the Groq model provider. Instead of connecting directly to Groq, my application sends requests to the gateway at `http://localhost:4000`.
 
