@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from app import agent, memory
+from app import agent, memory 
 from app.tools import TOOLS
 
 SYSTEM = agent.load_system_prompt()        # read once at startup: change the file -> restart the server

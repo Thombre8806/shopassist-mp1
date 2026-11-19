@@ -5,6 +5,7 @@ This is Session 23's PART 1, moved into its own file. You should not need to cha
 experiments/mp1_report.md.
 """
 import os
+import json
 from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
@@ -46,38 +47,71 @@ def get_llm():
     return LLM
 
 
+
 def run_tool(call) -> ToolMessage:
-    """Run one tool call. Never crashes: a bad call becomes an INVALID message the model reads (S20's Fix B)."""
+    """Run one tool call. Never crashes: a bad call becomes an INVALID message the model reads."""
     if call["name"] not in TOOLS:
-        return ToolMessage(f"INVALID: there is no tool called {call['name']}.", tool_call_id=call["id"])
+        return ToolMessage(
+            content=f"INVALID: there is no tool called {call['name']}.",
+            tool_call_id=call["id"]
+        )
+
     try:
-        return TOOLS[call["name"]].invoke(call)
-    except Exception as e:  # noqa: BLE001 - a tool must never crash the conversation
-        return ToolMessage(f"INVALID: {type(e).__name__}: {e}", tool_call_id=call["id"])
+        result = TOOLS[call["name"]].invoke(call["args"])
+
+        if isinstance(result, ToolMessage):
+            return result
+
+        return ToolMessage(
+            content=json.dumps(result, ensure_ascii=False),
+            tool_call_id=call["id"]
+        )
+
+    except Exception as e:
+        return ToolMessage(
+            content=f"INVALID: {type(e).__name__}: {e}",
+            tool_call_id=call["id"]
+        )
+
 
 
 def stream_turn(llm_with_tools, messages, max_steps=MAX_STEPS):
     """Yields ("tool", "name(args) -> result"), ("token", "piece"), and finally ("done", "whole answer")."""
     messages = list(messages)
     said = []
+
     for _ in range(max_steps):
         full = None
+
         for chunk in llm_with_tools.stream(messages):
             full = chunk if full is None else full + chunk
+
             if isinstance(chunk.content, str) and chunk.content:
                 said.append(chunk.content)
                 yield "token", chunk.content
+
         if full is None or not full.tool_calls:
             yield "done", "".join(said)
             return
+
         messages.append(full)
+
         for call in full.tool_calls:
             result = run_tool(call)
-            yield "tool", f"{call['name']}({call['args']}) -> {result.content}"
+
+            result_text = (
+                result.get("content", str(result))
+                if isinstance(result, dict)
+                else result.content
+            )
+
+            yield "tool", f"{call['name']}({call['args']}) -> {result_text}"
             messages.append(result)
+
     said.append(CAP_MESSAGE)
     yield "token", CAP_MESSAGE
     yield "done", "".join(said)
+
 
 
 def run_turn(llm_with_tools, messages):
